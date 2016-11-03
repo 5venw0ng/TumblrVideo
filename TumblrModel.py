@@ -7,6 +7,14 @@
 import sys, getopt,wget
 import time,re,os,requests,urllib2
 import sys
+from bs4 import BeautifulSoup
+
+#ss搭理配置，其他代理自己改
+proxies = {
+  "http": "socks5://127.0.0.1:1080",
+  "https": "socks5://127.0.0.1:1080",
+}
+
 reload(sys)
 sys.setdefaultencoding( "utf-8" )
 #----------- 爬取tumblr图片和视频 -----------
@@ -69,9 +77,11 @@ class TumblrClass:
 		'Accept-Encoding': 'gzip, deflate, br',
 		'Connection': 'keep-alive'
 		}
-		Reslut=self.se.get(url,headers=self.headers)
+		Reslut=self.se.get(url,headers=self.headers,proxies=proxies)
+
+		'''
 		sourceUrl=''
-		sourceUrls=re.findall('src=\"(?P<video_urls>https://www.tumblr.com/video_file/\d+/[^\"]*?)\"',Reslut.text)
+		sourceUrls=re.findall('src=\"(https://www.tumblr.com/video_file/\d+.*?)\"',Reslut.text)
 		if(sourceUrls!=[]):
 			sourceUrl=sourceUrls[0]
 		print 'Source url : '+sourceUrl
@@ -83,6 +93,27 @@ class TumblrClass:
 		sourceUrl=sourceUrl.replace('/','_')
 		sourceUrl='https://vt.tumblr.com/'+sourceUrl
 		trueUrl=sourceUrl+'.'+SourceType
+		'''
+
+		soup = BeautifulSoup(Reslut.text,"html.parser")
+		links = soup.find_all('source')
+		for link in links:
+			originUrl = link.get('src')
+			originType = link.get('type')
+			
+			'''
+			typeStr = originType[originType.index('/')+1:]
+			arr = originUrl.split('/');
+			urlKey = arr[len(arr)-2] + '_' + arr[len(arr)-1]
+			'''
+
+			#获取真正的URL
+			r = self.se.get(originUrl,headers=self.headers,proxies=proxies,allow_redirects = False)
+			print r.url, r.status_code, r.history, r.headers
+			trueUrl = r.headers['Location']
+			if '#_=_' in trueUrl:
+				trueUrl = trueUrl.replace('#_=_','')
+
 		return trueUrl
 	def save_video_file(self,url,path):
 		url=self.get_video_files(url)
@@ -156,7 +187,7 @@ class TumblrClass:
 	def deal_blogs_page(self,url):
 		print 'Start to deal url : '+url
 		self.set_headers(url)
-		Result=self.se.get(url,headers=self.headers)
+		Result=self.se.get(url,headers=self.headers,proxies=proxies)
 		text=Result.text
 		img_urls=self.get_img_urls(text)
 		video_urls=self.get_video_urls(text)
@@ -171,6 +202,8 @@ class TumblrClass:
 				nextUrl=self.index_url+'page/'+nextPage
 				self.curPage+=1
 				self.deal_blogs_page(nextUrl)
+				#抓取一页的时候，停60秒
+				#time.sleep(60)
 		else:
 			return
 	def deal_save_path(self):
