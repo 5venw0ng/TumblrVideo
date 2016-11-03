@@ -56,13 +56,13 @@ class TumblrClass:
 		blogList=[]
 		inFile=open(fileName,'r')
 		for line in inFile:
-			blogList.append(line)
+			blogList.append(line.replace('\n',''))
 		return blogList
 	def get_img_urls(self,text):
 		img_urls=[]
 		return img_urls
 	def get_video_urls(self,text):
-		video_urls=re.findall('(?P<video_urls>https://www.tumblr.com/video/[^/]*?/\d+/\d+/)',text)
+		video_urls=re.findall('(?P<video_urls><video id="player" width="600" height="450"><source src="httpswww.tumblr.com/video/[^/]*?/\d+/\d+/)',text)
 		return video_urls
 	def get_video_files(self,url):
 		url=url.strip('/')
@@ -81,7 +81,7 @@ class TumblrClass:
 
 		'''
 		sourceUrl=''
-		sourceUrls=re.findall('src=\"(https://www.tumblr.com/video_file/\d+.*?)\"',Reslut.text)
+		sourceUrls=re.findall('src=\"(<video id="player" width="600" height="450"><source src="httpswww.tumblr.com/video_file/\d+.*?)\"',Reslut.text)
 		if(sourceUrls!=[]):
 			sourceUrl=sourceUrls[0]
 		print 'Source url : '+sourceUrl
@@ -89,9 +89,9 @@ class TumblrClass:
 		SourceTypes=re.findall('type=\"video/(?P<vide_type>[^\"]*?)\"',Reslut.text)
 		if(SourceTypes!=[]):
 			SourceType=SourceTypes[0]
-		sourceUrl=re.sub('https://www.tumblr.com/video_file/\d+/','',sourceUrl)
+		sourceUrl=re.sub('<video id="player" width="600" height="450"><source src="httpswww.tumblr.com/video_file/\d+/','',sourceUrl)
 		sourceUrl=sourceUrl.replace('/','_')
-		sourceUrl='https://vt.tumblr.com/'+sourceUrl
+		sourceUrl='<video id="player" width="600" height="450"><source src="httpsvt.tumblr.com/'+sourceUrl
 		trueUrl=sourceUrl+'.'+SourceType
 		'''
 
@@ -109,7 +109,6 @@ class TumblrClass:
 
 			#获取真正的URL
 			r = self.se.get(originUrl,headers=self.headers,proxies=proxies,allow_redirects = False)
-			print r.url, r.status_code, r.history, r.headers
 			trueUrl = r.headers['Location']
 			if '#_=_' in trueUrl:
 				trueUrl = trueUrl.replace('#_=_','')
@@ -120,7 +119,7 @@ class TumblrClass:
 		print 'Start to download video file : '+url
 		self.video_url_file.write(url+'\n')
 		self.video_url_file.flush()
-		fileName=url.replace('https://vt.tumblr.com/','')
+		fileName=url.replace('<video id="player" width="600" height="450"><source src="httpsvt.tumblr.com/','')
 		tmp_fileName='_'+fileName
 		if(os.path.exists(path)==False):
 			os.makedirs(path)
